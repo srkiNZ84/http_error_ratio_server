@@ -48,12 +48,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		totalCount++
 		fmt.Fprint(w, "Everything's fine!")
-		fmt.Fprintf(w, "\n\nPercent errors returned so far is %v", float32(errCounter)/float32(totalCount))
+		printStats(w)
 	} else {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		errCounter++
 		totalCount++
 		fmt.Fprint(w, "Server Error!")
-		fmt.Fprintf(w, "\n\nPercent errors returned so far is %v", float32(errCounter)/float32(totalCount))
+		printStats(w)
 	}
+}
+
+func printStats(w http.ResponseWriter) {
+	fmt.Fprintf(w, "\n\nTotal requests %v", totalCount)
+	fmt.Fprintf(w, "\nTotal errors returned so far is %v", errCounter)
+	fmt.Fprintf(w, "\nPercent errors returned so far is %v", float32(errCounter)/float32(totalCount))
 }
