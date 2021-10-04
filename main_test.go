@@ -12,42 +12,30 @@ type NotRandomSource struct {
 func (r NotRandomSource) Intn(i int) int {
 	return r.n
 }
-func TestReturnRandomResponseSuccess(t *testing.T) {
-	failRate := 30
-	got := returnRandomResponse(NotRandomSource{100}, failRate)
-	want := RandomResponse{http.StatusOK, SUCCESS_MESSAGE}
 
-	if got != want {
-		t.Errorf("got %v, want %v", got, want)
+func TestReturnRandomResponse(t *testing.T) {
+	cases := []struct {
+		Description string
+		FailRate    int
+		RandomInt   int
+		want        RandomResponse
+	}{
+		{"Return success when rand is clearly above", 30, 100, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
+		{"Return failure when rand is clearly below", 30, 1, RandomResponse{http.StatusServiceUnavailable, FAILURE_MESSAGE}},
+		{"Return success from FailRate boundary", 30, 30, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
+		{"Return failure from FailRate boundary", 30, 29, RandomResponse{http.StatusServiceUnavailable, FAILURE_MESSAGE}},
+		{"Return failure when rand is zero", 30, 0, RandomResponse{http.StatusServiceUnavailable, FAILURE_MESSAGE}},
+		{"Always return success when error rate is zero", 0, 0, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
+		{"Always return success when error rate is zero", 0, 100, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
+		{"Always return success when error rate is zero", 0, 50, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
 	}
-}
 
-func TestReturnRandomResponseFail(t *testing.T) {
-	failRate := 30
-	got := returnRandomResponse(NotRandomSource{1}, failRate)
-	want := RandomResponse{http.StatusServiceUnavailable, FAILURE_MESSAGE}
-
-	if got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
-
-func TestReturnRandomResponseFailBoundary(t *testing.T) {
-	failRate := 30
-	got := returnRandomResponse(NotRandomSource{failRate - 1}, failRate)
-	want := RandomResponse{http.StatusServiceUnavailable, FAILURE_MESSAGE}
-
-	if got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
-
-func TestReturnRandomResponseSuccessBoundary(t *testing.T) {
-	failRate := 30
-	got := returnRandomResponse(NotRandomSource{failRate}, failRate)
-	want := RandomResponse{http.StatusOK, SUCCESS_MESSAGE}
-
-	if got != want {
-		t.Errorf("got %v, want %v", got, want)
+	for _, test := range cases {
+		t.Run(test.Description, func(t *testing.T) {
+			got := returnRandomResponse(NotRandomSource{test.RandomInt}, test.FailRate)
+			if got != test.want {
+				t.Errorf("got %q want %q", got, test.want)
+			}
+		})
 	}
 }
