@@ -1,24 +1,22 @@
-FROM golang:1.15-buster as builder
+FROM golang:1.17.1-buster as builder
 
-# Create and change to the app directory.
-WORKDIR /app
+# Create and change to the src directory.
+WORKDIR /src
 
 # Copy local code to the container image.
 COPY . ./
 
-# Build the binary.
-RUN go build -v -o server
+# Get dependencies
+RUN go get -d -v ./...
 
-# Use the official Debian slim image for a lean production container.
-# https://hub.docker.com/_/debian
-# https://docs.docker.com/develop/develop-images/multistage-build/#use-multi-stage-builds
-FROM debian:buster-slim
-RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# Build the binary.
+RUN go build -v -o app
+
+# Use the distroless image for a lean and secure container.
+FROM gcr.io/distroless/base
 
 # Copy the binary to the production image from the builder stage.
-COPY --from=builder /app/server /app/server
+COPY --from=builder /src/app /
 
 # Run the web service on container startup.
-CMD ["/app/server"]
+CMD ["/app"]
