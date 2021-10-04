@@ -10,15 +10,17 @@ import (
 	"time"
 )
 
-var rng rand.Rand
+var rng = *rand.New(rand.NewSource(time.Now().UnixNano()))
 var ratio int = 30
 var errCounter int = 0
 var totalCount int = 0
 
+const (
+	SUCCESS_MESSAGE = "Everything's fine!"
+	FAILURE_MESSAGE = "Server Error!"
+)
+
 func main() {
-	log.Println("Seeding random number generator...")
-	source := rand.NewSource(time.Now().UnixNano())
-	rng = *rand.New(source)
 
 	log.Println("Starting server...")
 	http.HandleFunc("/", handler)
@@ -42,19 +44,30 @@ func main() {
 	}
 }
 
+type EntropySource interface {
+	Intn(int) int
+}
+
+type RandomResponse struct {
+	status  int
+	message string
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
-	num := rng.Intn(100)
-	if num >= ratio {
-		w.WriteHeader(http.StatusOK)
+	res := returnRandomResponse(&rng, ratio)
+	w.WriteHeader(res.status)
+	fmt.Fprint(w, res.message)
+}
+
+func returnRandomResponse(e EntropySource, r int) RandomResponse {
+	num := e.Intn(100)
+	if num >= r {
 		totalCount++
-		fmt.Fprint(w, "Everything's fine!")
-		printStats(w)
+		return RandomResponse{status: http.StatusOK, message: SUCCESS_MESSAGE}
 	} else {
-		w.WriteHeader(http.StatusServiceUnavailable)
 		errCounter++
 		totalCount++
-		fmt.Fprint(w, "Server Error!")
-		printStats(w)
+		return RandomResponse{status: http.StatusServiceUnavailable, message: FAILURE_MESSAGE}
 	}
 }
 
