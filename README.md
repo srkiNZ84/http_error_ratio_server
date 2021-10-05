@@ -31,7 +31,15 @@ The applicaiton has two configuration variables, both of which are read in from 
 
 * ERROR_RATIO - The approximate percentage of requests (represented by an integer between 1 and 100) that should return an HTTP error (defaults to 30)
 
-## Docker image
+## Docker
+
+### Run Docker image
+
+```
+docker run -p 8080:8080 -e ERROR_RATIO=30 -e PORT=8090 srkinz/http-error-ratio
+```
+
+### Build
 
 To build the docker image, run:
 

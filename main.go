@@ -38,7 +38,7 @@ func main() {
 	}
 
 	log.Printf("Starting to listen on port %s", port)
-	log.Printf("%v percent of requests will return an HTTP 503", ratio)
+	log.Printf("Approximately %v percent of requests will return an HTTP 503", ratio)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal("Error starting http server", err)
 	}
