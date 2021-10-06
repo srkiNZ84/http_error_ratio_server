@@ -1,4 +1,6 @@
 # HTTP error ratio server
+[![Go Report Card](https://goreportcard.com/badge/github.com/srkiNZ84/http_error_ratio_server)](https://goreportcard.com/report/github.com/srkiNZ84/http_error_ratio_server)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/srkiNZ84/http_error_ratio_server)
 
 ## About
 
