@@ -16,8 +16,8 @@ var errCounter int = 0
 var totalCount int = 0
 
 const (
-	SUCCESS_MESSAGE = "Everything's fine!"
-	FAILURE_MESSAGE = "Server Error!"
+	success_message = "Everything's fine!"
+	failure_message = "Server Error!"
 )
 
 func main() {
@@ -44,10 +44,13 @@ func main() {
 	}
 }
 
+// Interface wrapper around things that can return a random integer
+// Implemented by rand and NotRandomSource in the tests
 type EntropySource interface {
 	Intn(int) int
 }
 
+// RandomResponse type to capture the HTTP response returned from the server
 type RandomResponse struct {
 	status  int
 	message string
@@ -63,12 +66,12 @@ func returnRandomResponse(e EntropySource, r int) RandomResponse {
 	num := e.Intn(100)
 	if num >= r {
 		totalCount++
-		return RandomResponse{status: http.StatusOK, message: SUCCESS_MESSAGE}
-	} else {
-		errCounter++
-		totalCount++
-		return RandomResponse{status: http.StatusServiceUnavailable, message: FAILURE_MESSAGE}
+		return RandomResponse{status: http.StatusOK, message: success_message}
 	}
+
+	errCounter++
+	totalCount++
+	return RandomResponse{status: http.StatusServiceUnavailable, message: failure_message}
 }
 
 func printStats(w http.ResponseWriter) {

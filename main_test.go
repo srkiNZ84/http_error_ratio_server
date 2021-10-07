@@ -20,14 +20,14 @@ func TestReturnRandomResponse(t *testing.T) {
 		RandomInt   int
 		want        RandomResponse
 	}{
-		{"Return success when rand is clearly above", 30, 100, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
-		{"Return failure when rand is clearly below", 30, 1, RandomResponse{http.StatusServiceUnavailable, FAILURE_MESSAGE}},
-		{"Return success from FailRate boundary", 30, 30, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
-		{"Return failure from FailRate boundary", 30, 29, RandomResponse{http.StatusServiceUnavailable, FAILURE_MESSAGE}},
-		{"Return failure when rand is zero", 30, 0, RandomResponse{http.StatusServiceUnavailable, FAILURE_MESSAGE}},
-		{"Always return success when error rate is zero", 0, 0, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
-		{"Always return success when error rate is zero", 0, 100, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
-		{"Always return success when error rate is zero", 0, 50, RandomResponse{http.StatusOK, SUCCESS_MESSAGE}},
+		{"Return success when rand is clearly above", 30, 100, RandomResponse{http.StatusOK, success_message}},
+		{"Return failure when rand is clearly below", 30, 1, RandomResponse{http.StatusServiceUnavailable, failure_message}},
+		{"Return success from FailRate boundary", 30, 30, RandomResponse{http.StatusOK, success_message}},
+		{"Return failure from FailRate boundary", 30, 29, RandomResponse{http.StatusServiceUnavailable, failure_message}},
+		{"Return failure when rand is zero", 30, 0, RandomResponse{http.StatusServiceUnavailable, failure_message}},
+		{"Always return success when error rate is zero", 0, 0, RandomResponse{http.StatusOK, success_message}},
+		{"Always return success when error rate is zero", 0, 100, RandomResponse{http.StatusOK, success_message}},
+		{"Always return success when error rate is zero", 0, 50, RandomResponse{http.StatusOK, success_message}},
 	}
 
 	for _, test := range cases {
