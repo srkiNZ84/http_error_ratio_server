@@ -12,23 +12,33 @@ import (
 
 var rng = *rand.New(rand.NewSource(time.Now().UnixNano()))
 var ratio int = 30
+var slow bool = true
+var slow_duration = 2
 var errCounter int = 0
 var totalCount int = 0
 
 const (
 	success_message = "Everything's fine!"
 	failure_message = "Server Error!"
+	slow_message    = "Delayed response by %v seconds"
 )
 
 func main() {
 
 	log.Println("Starting server...")
-	http.HandleFunc("/", handler)
+	//http.HandleFunc("/", handler)
+	http.HandleFunc("/", randomHandler(slowHandler()))
 
 	ratio, _ := strconv.Atoi(os.Getenv("ERROR_RATIO"))
 	if ratio == 0 {
 		ratio = 30
 		log.Printf("Default ratio of %v percent will be used", ratio)
+	}
+
+	slow_responses := os.Getenv("SLOW_RESPONES")
+	if slow_responses != "" {
+		slow = true
+		log.Println("Slow responses are turned on")
 	}
 
 	port := os.Getenv("PORT")
@@ -62,7 +72,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, res.message)
 }
 
+func randomHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Do random response generation here
+		res := returnRandomResponse(&rng, ratio)
+		w.WriteHeader(res.status)
+		fmt.Fprint(w, res.message)
+
+		// call other function here
+		fn(w, r)
+	}
+}
+
+func slowHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var sr RandomResponse
+		if slow {
+			sr = returnSlowResponse(slow_duration)
+		} else {
+			sr = returnSlowResponse(0)
+		}
+		fmt.Fprintf(w, sr.message)
+	}
+}
+
 func returnRandomResponse(e EntropySource, r int) RandomResponse {
+	log.Printf("returning random response")
 	num := e.Intn(100)
 	if num >= r {
 		totalCount++
@@ -72,6 +107,12 @@ func returnRandomResponse(e EntropySource, r int) RandomResponse {
 	errCounter++
 	totalCount++
 	return RandomResponse{status: http.StatusServiceUnavailable, message: failure_message}
+}
+
+func returnSlowResponse(s int) RandomResponse {
+	log.Printf("In the slow response function")
+	time.Sleep(time.Second * time.Duration(s))
+	return RandomResponse{status: http.StatusOK, message: fmt.Sprintf(slow_message, s)}
 }
 
 func printStats(w http.ResponseWriter) {

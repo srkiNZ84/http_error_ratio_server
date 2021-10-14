@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"testing"
+	"time"
 )
 
 type NotRandomSource struct {
@@ -11,6 +12,17 @@ type NotRandomSource struct {
 
 func (r NotRandomSource) Intn(i int) int {
 	return r.n
+}
+
+func TestReturnSlowResponse(t *testing.T) {
+	start := time.Now()
+	returnSlowResponse(2)
+	got := time.Since(start)
+	want, _ := time.ParseDuration("1s")
+
+	if got < want {
+		t.Errorf("got a response in %v wanted more than %v", got, want)
+	}
 }
 
 func TestReturnRandomResponse(t *testing.T) {
