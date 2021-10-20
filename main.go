@@ -29,7 +29,7 @@ const (
 func main() {
 	configure()
 
-	chain := alice.New(randomHandler, slowHandler).Then(http.HandlerFunc(myHandler))
+	chain := alice.New(randomHandler, slowHandler).Then(http.HandlerFunc(okHandler))
 
 	log.Println("Starting server...")
 	log.Printf("Starting to listen on port %s", port)
@@ -71,7 +71,7 @@ type RandomResponse struct {
 	message string
 }
 
-func myHandler(w http.ResponseWriter, r *http.Request) {
+func okHandler(w http.ResponseWriter, r *http.Request) {
 	printStats(w)
 }
 
