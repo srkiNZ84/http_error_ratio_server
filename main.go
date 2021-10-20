@@ -10,6 +10,8 @@ import (
 	"os/signal"
 	"strconv"
 	"time"
+
+	"github.com/justinas/alice"
 )
 
 var rng = *rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -19,6 +21,7 @@ var slow_duration = 10
 var errCounter int = 0
 var totalCount int = 0
 var shutdown_wait int = 20
+var port string = "8080"
 
 const (
 	success_message = "Everything's fine!"
@@ -27,31 +30,19 @@ const (
 )
 
 func main() {
-	mux := http.NewServeMux()
+
+	configure()
+
+	chain := alice.New(randomHandler, slowHandler).Then(http.HandlerFunc(okHandler))
+
+	//mux := http.NewServeMux()
 	log.Println("Starting server...")
-	mux.HandleFunc("/", randomHandler(slowHandler()))
-
-	ratio, _ := strconv.Atoi(os.Getenv("ERROR_RATIO"))
-	if ratio == 0 {
-		ratio = 30
-		log.Printf("Default ratio of %v percent will be used", ratio)
-	}
-
-	slow_responses := os.Getenv("SLOW_RESPONES")
-	if slow_responses != "" {
-		slow = true
-		log.Println("Slow responses are turned on")
-	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		log.Printf("Configuring default port %s", port)
-	}
+	//mux.HandleFunc("/", randomHandler(slowHandler()))
+	//mux.HandleFunc("/", chain.ServeHTTP)
 
 	server := &http.Server{
 		Addr:    ":" + port,
-		Handler: mux,
+		Handler: chain,
 	}
 	log.Printf("Starting to listen on port %s", port)
 	log.Printf("Approximately %v percent of requests will return an HTTP 503", ratio)
@@ -89,6 +80,26 @@ func main() {
 	os.Exit(0)
 }
 
+func configure() {
+	ratio, _ := strconv.Atoi(os.Getenv("ERROR_RATIO"))
+	if ratio == 0 {
+		ratio = 30
+		log.Printf("Default ratio of %v percent will be used", ratio)
+	}
+
+	slow_responses := os.Getenv("SLOW_RESPONES")
+	if slow_responses != "" {
+		slow = true
+		log.Println("Slow responses are turned on")
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Printf("Configuring default port %s", port)
+	}
+}
+
 // Interface wrapper around things that can return a random integer
 // Implemented by rand and NotRandomSource in the tests
 type EntropySource interface {
@@ -101,26 +112,24 @@ type RandomResponse struct {
 	message string
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	res := returnRandomResponse(&rng, ratio)
-	w.WriteHeader(res.status)
-	fmt.Fprint(w, res.message)
+func okHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("In the ok handler")
+	printStats(w)
 }
 
-func randomHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func randomHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Do random response generation here
+		log.Println("In the random handler")
 		res := returnRandomResponse(&rng, ratio)
 		w.WriteHeader(res.status)
 		fmt.Fprint(w, res.message)
-
-		// call other function here
-		fn(w, r)
-	}
+	})
 }
 
-func slowHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func slowHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("In the slow handler")
 		var sr RandomResponse
 		if slow {
 			sr = returnSlowResponse(slow_duration)
@@ -128,7 +137,7 @@ func slowHandler() http.HandlerFunc {
 			sr = returnSlowResponse(0)
 		}
 		fmt.Fprintf(w, sr.message)
-	}
+	})
 }
 
 func returnRandomResponse(e EntropySource, r int) RandomResponse {
