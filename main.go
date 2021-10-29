@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
@@ -15,9 +17,10 @@ import (
 var rng = *rand.New(rand.NewSource(time.Now().UnixNano()))
 var ratio int = 30
 var slow bool = true
-var slow_duration = 2
+var slow_duration = 10
 var errCounter int = 0
 var totalCount int = 0
+var shutdown_wait int = 20
 var port string = "8080"
 
 const (
@@ -27,16 +30,54 @@ const (
 )
 
 func main() {
+
 	configure()
 
 	chain := alice.New(randomHandler, slowHandler).Then(http.HandlerFunc(okHandler))
 
+	//mux := http.NewServeMux()
 	log.Println("Starting server...")
+	//mux.HandleFunc("/", randomHandler(slowHandler()))
+	//mux.HandleFunc("/", chain.ServeHTTP)
+
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: chain,
+	}
 	log.Printf("Starting to listen on port %s", port)
 	log.Printf("Approximately %v percent of requests will return an HTTP 503", ratio)
-	if err := http.ListenAndServe(":"+port, chain); err != nil {
-		log.Fatal("Error starting http server", err)
+
+	// Run our server in a go routine so that it doesn't block
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatalf("Error starting http server %v", err)
+		}
+	}()
+
+	c := make(chan os.Signal, 1)
+	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
+	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+	signal.Notify(c, os.Interrupt)
+
+	// Block until we receive our signal.
+	<-c
+	log.Println("Received our signal!!!")
+
+	// Create a deadline to wait for.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(shutdown_wait))
+	defer cancel()
+
+	log.Println("Waiting for connections to finish up...")
+	// Doesn't block if no connections, but will otherwise wait
+	// until the timeout deadline.
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Error shutting down %v", err)
 	}
+	// Optionally, you could run srv.Shutdown in a goroutine and block on
+	// <-ctx.Done() if your application should wait for other services
+	// to finalize based on context cancellation.
+	log.Println("shutting down")
+	os.Exit(0)
 }
 
 func configure() {
@@ -72,12 +113,14 @@ type RandomResponse struct {
 }
 
 func okHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("In the ok handler")
 	printStats(w)
 }
 
 func randomHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Do random response generation here
+		log.Println("In the random handler")
 		res := returnRandomResponse(&rng, ratio)
 		w.WriteHeader(res.status)
 		fmt.Fprint(w, res.message)
@@ -87,6 +130,7 @@ func randomHandler(h http.Handler) http.Handler {
 
 func slowHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("In the slow handler")
 		var sr RandomResponse
 		if slow {
 			sr = returnSlowResponse(slow_duration)
