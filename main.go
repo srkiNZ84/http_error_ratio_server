@@ -81,6 +81,7 @@ func randomHandler(h http.Handler) http.Handler {
 		res := returnRandomResponse(&rng, ratio)
 		w.WriteHeader(res.status)
 		fmt.Fprint(w, res.message)
+		h.ServeHTTP(w, r)
 	})
 }
 
