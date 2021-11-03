@@ -65,7 +65,12 @@ func main() {
 
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(shutdown_wait))
-	defer cancel()
+	defer func(){
+		//TODO: Check for active connections when timeout expires here
+		//TODO: Print out state of connections before shutting down
+		// https://stackoverflow.com/questions/51317122/how-to-get-number-of-idle-and-active-connections-in-go	
+		cancel()
+	}
 
 	log.Println("Waiting for connections to finish up...")
 	// Doesn't block if no connections, but will otherwise wait
